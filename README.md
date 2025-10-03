@@ -10,8 +10,14 @@ A lightweight command-line reminder management application built in Python. This
 - Supports duration-based reminders (Nm for minutes, Nh for hours)
 - Reminder daemon that runs in the background
 - Interactive dialog for handling reminders
-- Ability to stop, snooze, or repeat reminders
-- Pause and remove reminders
+- Ability to remove, snooze, or repeat reminders
+- Daemon crash detection with error message popups
+- Graceful error handling to allow daemon to continue running after errors
+- When run without arguments, defaults to list command
+- Timestamps show only time when date is today, otherwise show full date and time
+- Status column shown at the end of the list table
+- The 'pause' functionality has been removed
+- Uses static daemon script instead of generating it dynamically
 
 ## Installation
 
@@ -31,18 +37,21 @@ reminder [command] [arguments...]
 
 ### Commands
 
-#### `reminder list`
+#### `reminder` or `reminder list`
 Lists all existing reminders, showing:
 - Reminder ID
 - Message
-- Scheduled time
-- Last shown time
-- Status (including if snoozed)
-- Duration setting
+- Duration
+- Scheduled time (shows only time when today, otherwise shows full date and time)
+- Last shown time (shows only time when today, otherwise shows full date and time)
+- Status (Active, Snoozed until [time]) shown at the end
 - Daemon status (Active/Inactive)
+
+When run with no arguments, defaults to the list command.
 
 #### `reminder start`
 Starts the reminder daemon process in the background.
+The daemon will run as a separate process and show reminder dialogs as appropriate.
 
 #### `reminder stop`
 Stops the reminder daemon process.
@@ -69,14 +78,6 @@ Example:
 reminder remove 1,2,5
 ```
 
-#### `reminder pause <id>[,<id>,...]`
-Pauses reminders using comma-separated reminder IDs.
-
-Example:
-```bash
-reminder pause 3,7
-```
-
 ### Reminder Behavior
 
 When the application daemon determines that a reminder should be shown, a modal dialog appears with:
@@ -86,17 +87,27 @@ When the application daemon determines that a reminder should be shown, a modal 
 - Future reminder time (if repeated)
 
 The dialog includes these buttons:
-- **Stop**: Dismisses the reminder and prevents it from showing again
+- **Remove**: Dismisses the reminder and prevents it from showing again
 - **Snooze for 5 min**: Dismisses the reminder and shows it again after 5 minutes
 - **Repeat**: Dismisses the reminder but repeats it after the original duration or at the original time
+
+### Daemon Error Handling
+
+The daemon includes crash detection and error handling:
+- If the daemon encounters an error, it displays an error popup to notify the user
+- The daemon attempts to continue running after most errors
+- If there is a fatal error, a popup is shown before the daemon exits
+- The daemon will automatically retry after errors with a short delay
 
 ## Project Structure
 
 - `reminder.py`: Main entry point and command-line interface
-- `database.py`: SQLite database operations
-- `reminder_daemon.py`: Background daemon process
+- `database.py`: SQLite database operations with proper resource management
+- `reminder_daemon.py`: Background daemon process with error handling
 - `reminder_dialog.py`: Modal dialog implementation
 - `requirements.txt`: Python dependencies
+- `PRD.txt`: Product Requirements Document
+- `README.md`: This documentation file
 
 ## Example Usage
 
@@ -104,17 +115,17 @@ The dialog includes these buttons:
 # Add a reminder to take a break in 10 minutes
 reminder add "Take a break" 10m
 
-# List all reminders
-reminder list
+# List all reminders (can be run as just 'reminder')
+reminder
 
 # Start the daemon to show reminders
 reminder start
 
-# Pause a reminder with ID 2
-reminder pause 2
-
 # Remove a reminder with ID 1
 reminder remove 1
+
+# Stop the daemon
+reminder stop
 ```
 
 ## Requirements
@@ -123,3 +134,10 @@ reminder remove 1
 - psutil library
 - tkinter (part of standard Python installation)
 - SQLite (comes with Python)
+
+## Database and Resource Management
+
+- All database operations use 'with' statements for proper resource management
+- All database operations use conn.execute() method for better connection handling
+- The database automatically updates expired snoozed reminders to active status
+- The application maintains data consistency by updating statuses appropriately
