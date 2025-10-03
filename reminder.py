@@ -248,20 +248,21 @@ def start_stop_daemon(command, db):
         # Start the daemon
         daemon_script = os.path.join(os.path.dirname(__file__), "reminder_daemon.py")
         
-        # Create the daemon script if it doesn't exist
+        # Check that the daemon script exists (it should be part of the project)
         if not os.path.exists(daemon_script):
-            create_daemon_script(daemon_script)
+            print(f"Error: Daemon script {daemon_script} not found!")
+            sys.exit(1)
         
         # Start the daemon process in the background
         # Use STARTUPINFO to hide the window on Windows
         startupinfo = None
-        if os.name == "nt":  # Windows
+        if os.name == 'nt':  # Windows
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             startupinfo.wShowWindow = subprocess.SW_HIDE
 
         process = subprocess.Popen(
-            ["python", daemon_script],
+            ['python', daemon_script],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             stdin=subprocess.DEVNULL,
@@ -270,7 +271,7 @@ def start_stop_daemon(command, db):
         print(f"Reminder daemon started with PID: {process.pid}")
         
         # Write PID to lock file
-        with open(lock_file, "w") as f:
+        with open(lock_file, 'w') as f:
             f.write(str(process.pid))
     
     elif command == "stop":
@@ -293,101 +294,6 @@ def start_stop_daemon(command, db):
             os.remove(lock_file)
         else:
             print("Reminder daemon is not running")
-
-
-def create_daemon_script(daemon_script_path):
-    """Create the daemon script file."""
-    daemon_code = '''#!/usr/bin/env python3
-"""
-Reminder Daemon
-This script runs in the background to check and display reminders.
-"""
-import time
-import sqlite3
-from datetime import datetime
-from reminder_dialog import show_reminder_dialog
-from database import ReminderDatabase
-
-
-def main():
-    """Main daemon loop."""
-    db = ReminderDatabase()
-    
-    print("Reminder daemon started. Press Ctrl+C to stop.")
-    
-    try:
-        while True:
-            # Check for active reminders that should be shown now
-            active_reminders = db.get_active_reminders()
-            
-            for reminder in active_reminders:
-                rid, message, scheduled_time, last_shown, status, snooze_until, duration = reminder
-                
-                # Show the reminder dialog
-                result = show_reminder_dialog(message, duration, last_shown, scheduled_time)
-                
-                # Handle the user action
-                if result == "stop":
-                    # Remove the reminder
-                    db.remove_reminder(rid)
-                elif result == "snooze":
-                    # Snooze for 5 minutes
-                    from datetime import datetime, timedelta
-                    snooze_until = datetime.now() + timedelta(minutes=5)
-                    db.update_reminder_times(rid, last_shown=datetime.now(), snooze_until=snooze_until)
-                    db.update_reminder_status(rid, "snoozed")
-                elif result == "repeat":
-                    # Calculate next occurrence based on original duration
-                    from datetime import datetime, timedelta
-                    import re
-                    
-                    if ":" in duration:  # Time format (hh:mm)
-                        hour, minute = map(int, duration.split(":"))
-                        now = datetime.now()
-                        next_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-                        if next_time <= now:
-                            next_time += timedelta(days=1)
-                        db.update_reminder_times(rid, last_shown=datetime.now(), scheduled_time=next_time)
-                    elif duration.lower().endswith("m"):  # Minutes format (Nm)
-                        minutes = int(duration[:-1])
-                        next_time = datetime.now() + timedelta(minutes=minutes)
-                        db.update_reminder_times(rid, last_shown=datetime.now(), scheduled_time=next_time)
-                    elif duration.lower().endswith("h"):  # Hours format (Nh)
-                        hours = int(duration[:-1])
-                        next_time = datetime.now() + timedelta(hours=hours)
-                        db.update_reminder_times(rid, last_shown=datetime.now(), scheduled_time=next_time)
-            
-            # Sleep for a short period before checking again
-            time.sleep(30)  # Check every 30 seconds
-    
-    except KeyboardInterrupt:
-        print("\nReminder daemon stopped.")
-        return
-
-
-if __name__ == "__main__":
-    main()
-'''
-    
-    with open(daemon_script_path, "w") as f:
-        f.write(daemon_code)
-
-
-def remove_reminders(db, ids_str):
-    """Remove reminders by ID."""
-    try:
-        ids = [int(id_str.strip()) for id_str in ids_str.split(",")]
-        for reminder_id in ids:
-            if db.remove_reminder(reminder_id):
-                print(f"Reminder {reminder_id} removed successfully")
-            else:
-                print(f"Reminder {reminder_id} not found")
-    except ValueError:
-        print("Error: IDs must be integers separated by commas")
-        sys.exit(1)
-
-
-
 
 
 if __name__ == "__main__":
