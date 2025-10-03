@@ -46,6 +46,41 @@ def parse_time_input(time_input):
         raise ValueError("Invalid time format. Use hh:mm, Nm, or Nh.")
 
 
+def calculate_remaining_time(scheduled_time_str):
+    """Calculate remaining time from scheduled time string and return formatted string (e.g. '1h 14m' or '33m')"""
+    if not scheduled_time_str:
+        return "N/A"
+    
+    try:
+        # Parse the scheduled time string to datetime object
+        scheduled_dt = datetime.fromisoformat(scheduled_time_str.replace('Z', '+00:00')) if scheduled_time_str else None
+        if not scheduled_dt:
+            return "N/A"
+        
+        # Get current time
+        now = datetime.now()
+        
+        # Calculate the difference
+        time_diff = scheduled_dt - now
+        
+        # If the scheduled time is in the past, return 'Overdue' or just '0m'
+        if time_diff.total_seconds() <= 0:
+            return "Due"
+        
+        # Calculate hours and minutes
+        total_seconds = int(time_diff.total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        
+        # Format the output
+        if hours > 0:
+            return f"{hours}h {minutes}m"
+        else:
+            return f"{minutes}m"
+    except:
+        return "N/A"
+
+
 def main():
     """Main entry point for the reminder application."""
     parser = argparse.ArgumentParser(
@@ -98,6 +133,35 @@ def main():
         sys.exit(1)
 
 
+def remove_reminders(db, ids_str):
+    """Remove reminders by IDs."""
+    if not ids_str:
+        print("Error: Please provide reminder ID(s) to remove.")
+        return
+        
+    try:
+        # Parse comma-separated IDs
+        ids = [int(id.strip()) for id in ids_str.split(',')]
+        
+        # Remove each reminder
+        removed_count = 0
+        for reminder_id in ids:
+            if db.remove_reminder(reminder_id):
+                print(f"Reminder {reminder_id} removed successfully")
+                removed_count += 1
+            else:
+                print(f"Reminder {reminder_id} not found")
+        
+        if removed_count == 0:
+            print("No reminders were removed")
+        else:
+            print(f"Successfully removed {removed_count} reminder(s)")
+            
+    except ValueError:
+        print("Error: Invalid ID format. Use comma-separated integers (e.g., 1,2,5).")
+        sys.exit(1)
+
+
 def add_reminder(db, message, time_input):
     """Add a new reminder."""
     try:
@@ -118,8 +182,8 @@ def list_reminders(db):
     if not reminders:
         print("No reminders found.")
     else:
-        print(f"{'ID':<3} {'Message':<30} {'Duration':<10} {'Scheduled Time':<20} {'Last Shown':<20} {'Status':<25}")
-        print("-" * 118)
+        print(f"{'ID':<3} {'Message':<30} {'Duration':<10} {'Scheduled Time':<20} {'Remaining Time':<15} {'Last Shown':<20} {'Status':<25}")
+        print("-" * 133)
         
         for reminder in reminders:
             rid, message, scheduled_time, last_shown, status, snooze_until, duration = reminder
@@ -148,6 +212,9 @@ def list_reminders(db):
                             scheduled_time_str = scheduled_time_str.split(' ', 1)[1]  # Just the time part
                     except:
                         pass  # Keep original if parsing fails
+            
+            # Calculate remaining time
+            remaining_time_str = calculate_remaining_time(scheduled_time)
             
             if last_shown:
                 try:
@@ -198,7 +265,7 @@ def list_reminders(db):
             else:
                 status_display = status.title()
             
-            print(f"{rid:<3} {message_truncated:<30} {duration:<10} {scheduled_time_str:<20} {last_shown_str:<20} {status_display:<25}")
+            print(f"{rid:<3} {message_truncated:<30} {duration:<10} {scheduled_time_str:<20} {remaining_time_str:<15} {last_shown_str:<20} {status_display:<25}")
     
     # Check daemon status
     import os
