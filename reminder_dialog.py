@@ -18,7 +18,7 @@ def show_reminder_dialog(message, duration, last_shown, scheduled_time):
         scheduled_time: When the reminder is scheduled for
         
     Returns:
-        String indicating the user action: "stop", "snooze", or "repeat"
+        String indicating the user action: "stop" (when Remove button is clicked), "snooze", or "repeat"
     """
     root = tk.Tk()
     root.title("Reminder")
@@ -53,8 +53,8 @@ def show_reminder_dialog(message, duration, last_shown, scheduled_time):
     # Store the result of the dialog
     result = {"action": None}
     
-    def on_stop():
-        result["action"] = "stop"
+    def on_remove():
+        result["action"] = "stop"  # Keep "stop" as the action identifier since daemon expects it
         root.destroy()
     
     def on_snooze():
@@ -70,8 +70,8 @@ def show_reminder_dialog(message, duration, last_shown, scheduled_time):
     button_frame.pack(pady=20)
     
     # Create buttons
-    stop_button = tk.Button(button_frame, text="Stop", command=on_stop, width=10)
-    stop_button.pack(side=tk.LEFT, padx=5)
+    remove_button = tk.Button(button_frame, text="Remove", command=on_remove, width=10)
+    remove_button.pack(side=tk.LEFT, padx=5)
     
     snooze_button = tk.Button(button_frame, text="Snooze for 5 min", command=on_snooze, width=15)
     snooze_button.pack(side=tk.LEFT, padx=5)
