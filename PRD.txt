@@ -1,0 +1,59 @@
+**Objective:**
+Build a lightweight, command-line reminder management application named `reminder` in Python. 
+The tool should be simple to use, low cognitive load, and effective for students or employees during work hours. Assume that this application will only be executed on Windows OS.
+
+### General Requirements
+
+* Runs as a command-line program: `reminder [command] [arguments...]`.
+* Stores all data in a local SQLite database.
+* Provides crash detection and error handling for the daemon process.
+* Uses static daemon script instead of generating it dynamically.
+
+### Commands
+
+The following commands are supported:
+
+`reminder` or `reminder list`
+- This command will list all the existing reminders already available. This will also show the last time when this reminder was shown and the future time when it will next be shown.
+- The information will also show if the reminder is snoozed.
+- This will also provide status of the reminder daemon process as "Inactive" or "Active".
+- When run without any arguments, defaults to list command.
+
+`reminder <start|stop>`
+- This command will either start or stop the reminder daemon process.
+
+`reminder add <reminder text> <hh:mm|Nm|Nh>`
+- This command will register the new reminder in the application.
+- The <reminder text> is the reminder to be shown to user.
+- "hh:mm" is the time given in 24 hr format. The reminder will be shown at given time.
+- "Nm" is the number of minutes as duration. "N" is a number between 1 and 500. The reminder will be shown after given duration in minutes.
+- "Nh" is the number of hours as duration. "N" is a number between 1 and 24. The reminder will be shown after given duration in hours.
+
+`reminder remove <id>[,<id>,...]`
+- This command will remove the reminders using the reminder ids provided.
+
+`reminder help`
+- This command will show all the available commands and their description of usage.
+
+### Reminder behavior
+When the application daemon determines that a reminder is to be shown, a modal dialogue will be shown with the following information:
+- Reminder message
+- Reminder duration / time setting
+- Last time when reminder was shown
+- Future reminder time, if repeated by user
+
+This dialog will have the following buttons:
+`Remove` - The reminder will be dismissed at this time and will not be shown again. This reminder will be removed.
+`Snooze for 5 min` - The reminder will be dismissed at this time and will be shown after 5 minutes.
+`Repeat` - The reminder will be dismissed at this time and will repeat after given duration or at given time.
+
+### Additional Features
+- Daemon crash detection with error message popups to notify users when the daemon encounters errors
+- Graceful error handling to allow daemon to continue running after most errors
+- Automatic restart capability after errors
+- Proper resource management using 'with' statements for database connections
+- Use of conn.execute() instead of cursor.execute() for database operations
+- The 'pause' command has been removed from the application
+- Timestamps in list show only time (HH:MM) when date is today, otherwise show full date and time
+- Status column is shown at the end of the list table
+- The daemon uses a static script file instead of generating it dynamically
